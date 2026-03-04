@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clutch Competitor Series - All Star Voting</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212; 
+            color: #e0e0e0; 
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px 10px; 
+        }
+        
+        .main-title {
+            text-align: center;
+            color: #ffffff;
+            font-size: 2.2em; 
+            margin-bottom: 5px;
+            line-height: 1.1;
+        }
+
+        .instructions {
+            text-align: center;
+            font-size: 1.05em; 
+            margin-bottom: 5px;
+            color: #aaaaaa;
+        }
+
+        .eligibility-note {
+            text-align: center;
+            font-size: 0.85em; 
+            color: #888888;
+            font-style: italic;
+            margin-bottom: 12px;
+        }
+
+        .stats-link {
+            text-align: center;
+            font-size: 1em; 
+            margin-bottom: 25px;
+            color: #aaaaaa;
+        }
+
+        .stats-link a {
+            color: #FFD700; 
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+
+        .stats-link a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        #loadingIndicator {
+            text-align: center;
+            font-size: 1.1em;
+            color: #FFD700;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #FFD700;
+        }
+
+        .league-section {
+            background: var(--bg-color);
+            color: var(--text-color);
+            margin-bottom: 25px; 
+            border-radius: 10px; 
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+            border: 2px solid var(--secondary-color);
+        }
+
+        .league-header {
+            display: flex;
+            align-items: center;
+            background: var(--secondary-color);
+            color: var(--primary-color);
+            padding: 12px 20px; 
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .league-logo {
+            width: 50px; 
+            height: 50px;
+            object-fit: contain;
+            margin-right: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 4px;
+        }
+
+        .league-title {
+            margin: 0;
+            font-size: 1.6em; 
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .divisions-container {
+            padding: 15px 20px; 
+        }
+
+        .division-section {
+            margin-bottom: 20px; 
+        }
+
+        .division-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .division-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .division-title {
+            font-size: 1.2em; 
+            font-weight: bold;
+        }
+
+        .counter {
+            font-size: 0.9em; 
+            font-weight: bold;
+            opacity: 0.8;
+            background: var(--secondary-color);
+            color: var(--counter-text);
+            padding: 4px 10px; 
+            border-radius: 16px;
+        }
+
+        .counter.valid {
+            background: #27ae60;
+            color: white;
+            opacity: 1;
+        }
+
+        .player-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+            gap: 10px; 
+        }
+
+        .player-label {
+            display: block;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .player-label input {
+            display: none;
+        }
+
+        .player-name {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px; 
+            padding: 8px 6px; 
+            border-radius: 5px; 
+            background: var(--card-bg);
+            border: 2px solid var(--secondary-color);
+            color: var(--text-color);
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.9em; 
+        }
+
+        .team-logo {
+            width: 20px; 
+            height: 20px;
+            object-fit: contain;
+        }
+
+        .player-label:hover .player-name {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+
+        .player-label input:checked + .player-name {
+            background: var(--primary-color);
+            color: var(--checked-text);
+            border-color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .player-label input:disabled + .player-name {
+            opacity: 0.35; 
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Player Card Popup */
+        .player-card-popup {
+            visibility: hidden;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border-radius: 8px; 
+            padding: 8px; 
+            position: absolute;
+            z-index: 9999; 
+            bottom: 130%; 
+            left: 50%;
+            transform: translateX(-50%);
+            width: 270px; 
+            opacity: 0;
+            transition: opacity 0.2s ease, bottom 0.2s ease;
+            pointer-events: none; 
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            cursor: default;
+        }
+
+        .player-card-popup::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px; 
+            border-width: 6px;
+            border-style: solid;
+            border-color: var(--primary-color) transparent transparent transparent;
+        }
+
+        .player-label:hover .player-card-popup {
+            visibility: visible;
+            opacity: 1;
+            bottom: 120%; 
+        }
+
+        .card-header-title {
+            font-size: 1em; 
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .card-stats-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px; 
+        }
+
+        .card-stat-box {
+            background: #2d2d2d;
+            padding: 4px 1px; 
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #3d3d3d;
+            flex: 0 0 31.5%; 
+            min-width: 0; 
+            overflow-wrap: break-word; 
+        }
+
+        .stat-val {
+            display: block;
+            font-size: 0.95em; 
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 1px;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.55em; 
+            color: #aaaaaa;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            line-height: 1.1;
+        }
+
+        .card-footer-note {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.7em; 
+            color: #777;
+            font-style: italic;
+        }
+
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 18px; 
+            background-color: #27ae60;
+            color: white;
+            font-size: 1.3em; 
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            margin-top: 18px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background-color: #219150;
+        }
+
+        .submit-btn:disabled {
+            background-color: #555555;
+            color: #888888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">Clutch Competitor Series <br> All Star Voting</h1>
+    <p class="instructions">Select exactly <strong>6 players</strong> from each division across all 4 leagues.</p>
+    <p class="eligibility-note">* Players must have played at least 4 series by Week 5 to be considered for all-star voting.</p>
+    <p class="stats-link">Review full player stats before voting at <a href="https://clutchcompetitorseries.com" target="_blank">clutchcompetitorseries.com</a></p>
+
+    <div id="loadingIndicator">Fetching live player stats from database...</div>
+
+    <form id="votingForm" action="https://api.web3forms.com/submit" method="POST" style="display: none;">
+        <input type="hidden" name="access_key" value="122933c9-7ed2-408e-a44c-94eb43e3978a">
+        <input type="hidden" name="subject" value="New All-Star Ballot Submitted!">
+        
+        <div id="formContainer"></div>
+        <button type="submit" id="submitBtn" class="submit-btn" disabled>Submit Votes (0 / 48 Selected)</button>
+    </form>
+
+    <script>
+        const leagueConfig = {
+            "CCS": { 
+                fullName: "Clutch Competitor Series", primary: "#FFD700", secondary: "#555555", 
+                bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#222222", counterText: "#ffffff"
+            },
+            "CPL": { 
+                fullName: "Clutch Prospect League", primary: "#FF8C00", secondary: "#555555", 
+                bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff"
+            },
+            "CAS": { 
+                fullName: "Clutch Amateur Series", primary: "#E74C3C", secondary: "#000000", 
+                bg: "#1a1a1a", cardBg: "#2d2d2d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff"
+            },
+            "CNL": { 
+                fullName: "Clutch Novice League", primary: "#3498DB", secondary: "#000000", 
+                bg: "#1a1a1a", cardBg: "#2d2d2d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff"
+            }
+        };
+
+        const divisions = ["American Division", "International Division"];
+
+        const playerData = {
+            "CCS": {
+                "American Division": [
+                    { name: "Bennus", team: "Blasters" }, { name: "Dyloh", team: "Blasters" }, { name: "HogdoBogdo", team: "Blasters" },
+                    { name: "Mini", team: "Howlers" }, { name: "DJ", team: "Howlers" }, { name: "Ryan", team: "Howlers" },
+                    { name: "Precons", team: "Moose" }, { name: "Sxcure", team: "Moose" }, { name: "Sim", team: "Moose" },
+                    { name: "ILL", team: "Pirates" }, { name: "Rac1n", team: "Pirates" }, { name: "Blisc", team: "Pirates" },
+                    { name: "Sylvia", team: "Shockwave" }, { name: "Beast", team: "Shockwave" }, { name: "Silwoe", team: "Shockwave" },
+                    { name: "Brayjay", team: "Stars" }, { name: "Ale", team: "Stars" }
+                ],
+                "International Division": [
+                    { name: "Nautikl", team: "Anglers" }, { name: "Wrld", team: "Anglers" }, { name: "Grizz", team: "Anglers" },
+                    { name: "Angel", team: "Flyers" }, { name: "Joey", team: "Flyers" }, { name: "Kizvy", team: "Flyers" },
+                    { name: "Souls", team: "Ninjas" }, { name: "Oofy", team: "Ninjas" },
+                    { name: "Cristian", team: "Samurai" }, { name: "Blezzy", team: "Samurai" },
+                    { name: "Dxge", team: "Vipers" }, { name: "Poptarts", team: "Vipers" },
+                    { name: "Eli", team: "Zebras" }, { name: "DainBramage", team: "Zebras" }
+                ]
+            },
+            "CPL": {
+                "American Division": [
+                    { name: "Drip", team: "Coyotes" }, { name: "Driftz", team: "Coyotes" }, { name: "BluePhoenix", team: "Coyotes" },
+                    { name: "Pax", team: "Groundhogs" }, { name: "Frames", team: "Groundhogs" },
+                    { name: "Slykooper", team: "Marauders" }, { name: "DarkGalaxiess", team: "Marauders" }, { name: "Loomeister", team: "Marauders" },
+                    { name: "Guccianii", team: "Mortars" }, { name: "An7iix", team: "Mortars" },
+                    { name: "Rev", team: "Sonic Boom" }, { name: "Nlyu", team: "Sonic Boom" }, { name: "LuvJames", team: "Sonic Boom" },
+                    { name: "Laxxin.", team: "Supernova" }, { name: "Lapis", team: "Supernova" }, { name: "Path678", team: "Supernova" }
+                ],
+                "International Division": [
+                    { name: "Glo", team: "Buffalo" }, { name: "Cryptid", team: "Buffalo" }, { name: "Slayer2k", team: "Buffalo" },
+                    { name: "Bankai", team: "Cobras" }, { name: "Ren", team: "Cobras" },
+                    { name: "Grislyrl", team: "Fishermen" }, { name: "Hellecz", team: "Fishermen" }, { name: "CyanLG", team: "Fishermen" },
+                    { name: "Freazee", team: "Lory" }, { name: "Nick", team: "Lory" }, { name: "Rogue", team: "Lory" },
+                    { name: "Decaf", team: "Shadows" }, { name: "Cam", team: "Shadows" },
+                    { name: "Nirvana", team: "Warriors" }, { name: "Illuzhn", team: "Warriors" }, { name: "Asfhyx", team: "Warriors" }
+                ]
+            },
+            "CAS": {
+                "American Division": [
+                    { name: "Large Microwave", team: "Astronauts" }, { name: "Luseo", team: "Astronauts" },
+                    { name: "Aiden", team: "Black Bears" }, { name: "DsyrJames", team: "Black Bears" }, { name: "Shoodoow", team: "Black Bears" },
+                    { name: "Hate.", team: "Cannons" }, { name: "JugPanda", team: "Cannons" }, { name: "Tor", team: "Cannons" },
+                    { name: "KRZ", team: "Conquerors" }, { name: "Vorse", team: "Conquerors" },
+                    { name: "Cjayy", team: "Surge" }, { name: "Speacial", team: "Surge" },
+                    { name: "Marchosias", team: "Wolfpack" }
+                ],
+                "International Division": [
+                    { name: "JT", team: "Behemoths" }, { name: "Spxrr", team: "Behemoths" }, { name: "Different Blu", team: "Behemoths" },
+                    { name: "Dr Scrawny", team: "Copperheads" }, { name: "Carsxnn", team: "Copperheads" }, { name: "Rizada", team: "Copperheads" },
+                    { name: "Senna", team: "Prowlers" }, { name: "Pluooh", team: "Prowlers" },
+                    { name: "Bvo", team: "Shaman" }, { name: "Wraine", team: "Shaman" }, { name: "Talen", team: "Shaman" },
+                    { name: "Meepomic", team: "Skyhawks" }, { name: "Striker", team: "Skyhawks" }, { name: "Violence", team: "Skyhawks" }
+                ]
+            },
+            "CNL": {
+                "American Division": [
+                    { name: "Deplooped", team: "Ballistics" }, { name: "Haakonn", team: "Ballistics" }, { name: "Skelly", team: "Ballistics" },
+                    { name: "Bacon", team: "Ducks" }, { name: "Zoomer", team: "Ducks" }, { name: "Trout", team: "Ducks" }, { name: "Tyvi", team: "Ducks" },
+                    { name: "Jon", team: "Rovers" }, { name: "TV Isa_on_wii", team: "Rovers" }, { name: "Dim", team: "Rovers" },
+                    { name: "Seori", team: "Shipwreck" }, { name: "Paz", team: "Shipwreck" }, { name: "Rykow", team: "Shipwreck" },
+                    { name: "Sports", team: "Sound" }, { name: "Eyes", team: "Sound" }, { name: "Zeroh", team: "Sound" },
+                    { name: "Botco", team: "Timberwolves" }, { name: "KaosZaxel", team: "Timberwolves" }, { name: "Yusvanny", team: "Timberwolves" }
+                ],
+                "International Division": [
+                    { name: "Juxzon", team: "Anacondas" }, { name: "Ben", team: "Anacondas" },
+                    { name: "Kazegurui", team: "Bushido" }, { name: "DTB_Bubbaa", team: "Bushido" },
+                    { name: "Nirosat", team: "Leviathans" }, { name: "Ripshark", team: "Leviathans" }, { name: "Burner", team: "Leviathans" }, { name: "OvrCookdBred", team: "Leviathans" },
+                    { name: "Terbiee", team: "Redwings" }, { name: "Mup", team: "Redwings" }, { name: "VRL", team: "Redwings" },
+                    { name: "Chrome Moisty", team: "Elephants" }, { name: "Tarry", team: "Elephants" }, { name: "ClamSplitta", team: "Elephants" },
+                    { name: "Jurchao", team: "Thieves" }
+                ]
+            }
+        };
+
+        const formContainer = document.getElementById('formContainer');
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const votingForm = document.getElementById('votingForm');
+
+        // Master CSV URL
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRuwmvDQ14YyyR9em6-782QQbJLllB2rguV_RGyl8hqzt4ZW-wZq405IndmWUJyRuzU2PZPCi8eTXSY/pub?gid=0&single=true&output=csv";
+
+        let liveStatsMap = {};
+        let formRendered = false; 
+
+        // Includes "SP" in the list of desired stats
+        const desiredStatsConfig = [
+            { key: "MVPR", matchWords: ["mvpr"] },
+            { key: "Avg Score", matchWords: ["avg score", "average score"] },
+            { key: "GPG", matchWords: ["gpg"] },
+            { key: "APG", matchWords: ["apg"] },
+            { key: "SvPG", matchWords: ["sapg", "svpg"] },
+            { key: "SP", matchWords: ["sp", "series played"] } 
+        ];
+
+        function forceDisplayForm() {
+            if (formRendered) return; 
+            formRendered = true;
+            
+            loadingIndicator.style.display = 'none';
+            votingForm.style.display = 'block';
+            renderForm();
+        }
+
+        setTimeout(forceDisplayForm, 2500);
+
+        async function initializeForm() {
+            try {
+                const response = await fetch(csvUrl + "&t=" + new Date().getTime());
+                if (!response.ok) throw new Error("Failed to connect to spreadsheet.");
+                
+                const csvText = await response.text();
+                const rows = csvText.trim().split(/\r?\n/);
+                
+                if (rows.length > 0) {
+                    const headers = rows[0].split(',').map(h => h.replace(/['"]+/g, '').trim().toLowerCase());
+                    const playerIdx = headers.findIndex(h => h.includes('player'));
+
+                    if (playerIdx !== -1) {
+                        const statColumnMap = [];
+                        desiredStatsConfig.forEach(stat => {
+                            const index = headers.findIndex(h => stat.matchWords.includes(h));
+                            if (index !== -1) {
+                                statColumnMap.push({ label: stat.key, index: index });
+                            }
+                        });
+
+                        for (let i = 1; i < rows.length; i++) {
+                            const cols = rows[i].split(',').map(col => col.replace(/['"]+/g, '').trim());
+                            
+                            if (cols.length > playerIdx && cols[playerIdx]) {
+                                const playerName = cols[playerIdx];
+                                let playerStatsObj = {};
+                                
+                                statColumnMap.forEach(statCol => {
+                                    playerStatsObj[statCol.label] = cols[statCol.index] || "0";
+                                });
+                                
+                                liveStatsMap[playerName] = playerStatsObj;
+                            }
+                        }
+                    }
+                }
+                console.log("Filtered player cards loaded successfully!");
+            } catch (error) {
+                console.warn("Could not load stats. Falling back to default UI.", error);
+            } 
+            
+            forceDisplayForm();
+        }
+
+        function buildPlayerCard(playerName) {
+            const stats = liveStatsMap[playerName];
+            
+            if (!stats) {
+                return `<div class="card-header-title">Data Unavailable</div><div class="card-footer-note">Stats missing or ineligible</div>`;
+            }
+
+            let html = `<div class="card-header-title">Season Stats</div>`;
+            html += `<div class="card-stats-grid">`;
+            
+            for (const [statName, statValue] of Object.entries(stats)) {
+                html += `
+                    <div class="card-stat-box">
+                        <span class="stat-val">${statValue}</span>
+                        <span class="stat-label">${statName}</span>
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+            html += `<div class="card-footer-note">View complete leaderboards online</div>`;
+            return html;
+        }
+
+        function renderForm() {
+            Object.keys(leagueConfig).forEach(league => {
+                const theme = leagueConfig[league];
+                const leagueDiv = document.createElement('div');
+                leagueDiv.className = 'league-section';
+                
+                leagueDiv.style.setProperty('--primary-color', theme.primary);
+                leagueDiv.style.setProperty('--secondary-color', theme.secondary);
+                leagueDiv.style.setProperty('--bg-color', theme.bg);
+                leagueDiv.style.setProperty('--card-bg', theme.cardBg);
+                leagueDiv.style.setProperty('--text-color', theme.text);
+                leagueDiv.style.setProperty('--checked-text', theme.checkedText);
+                leagueDiv.style.setProperty('--counter-text', theme.counterText);
+
+                let html = `
+                    <div class="league-header">
+                        <img src="logos/${league}.png" alt="${league} Logo" class="league-logo" onerror="this.style.display='none'">
+                        <h2 class="league-title">${theme.fullName}</h2>
+                    </div>
+                    <div class="divisions-container">
+                `;
+
+                divisions.forEach(division => {
+                    const groupName = `${league}_${division.replace(' ', '_')}`;
+                    
+                    html += `
+                        <div class="division-section">
+                            <div class="division-header">
+                                <div class="division-title">${division}</div>
+                                <div class="counter" id="counter_${groupName}">0 / 6</div>
+                            </div>
+                            <div class="player-grid">
+                    `;
+
+                    const currentDivisionPlayers = (playerData[league] && playerData[league][division]) 
+                        ? playerData[league][division] 
+                        : null;
+
+                    if (currentDivisionPlayers) {
+                        currentDivisionPlayers.forEach(player => {
+                            const cardHtml = buildPlayerCard(player.name);
+                            
+                            html += `
+                                <label class="player-label">
+                                    <div class="player-card-popup">${cardHtml}</div>
+                                    <input type="checkbox" name="${groupName}" value="${player.name}" onchange="handleSelection('${groupName}')"> 
+                                    <span class="player-name">
+                                        ${player.name}
+                                        <img src="logos/${player.team}.png" alt="${player.team}" class="team-logo" title="${player.team}" onerror="this.style.display='none'">
+                                    </span>
+                                </label>
+                            `;
+                        });
+                    } else {
+                        for (let i = 1; i <= 10; i++) {
+                            html += `
+                                <label class="player-label">
+                                    <div class="player-card-popup">
+                                        <div class="card-header-title">TBD</div>
+                                        <div class="card-footer-note">Stats will appear here once players are locked in.</div>
+                                    </div>
+                                    <input type="checkbox" name="${groupName}" value="Player ${i}" onchange="handleSelection('${groupName}')"> 
+                                    <span class="player-name">Player ${i}</span>
+                                </label>
+                            `;
+                        }
+                    }
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div>`; 
+                leagueDiv.innerHTML = html;
+                formContainer.appendChild(leagueDiv);
+            });
+        }
+
+        function handleSelection(groupName) {
+            const checkboxes = document.querySelectorAll(`input[name="${groupName}"]`);
+            const checkedBoxes = document.querySelectorAll(`input[name="${groupName}"]:checked`);
+            const counterLabel = document.getElementById(`counter_${groupName}`);
+            
+            counterLabel.innerText = `${checkedBoxes.length} / 6`;
+
+            if (checkedBoxes.length === 6) {
+                counterLabel.classList.add('valid');
+                counterLabel.innerText = "6 / 6 ✅";
+                checkboxes.forEach(box => {
+                    if (!box.checked) box.disabled = true;
+                });
+            } else {
+                counterLabel.classList.remove('valid');
+                checkboxes.forEach(box => box.disabled = false);
+            }
+
+            checkOverallFormValidity();
+        }
+
+        function checkOverallFormValidity() {
+            let totalChecked = 0;
+            let totalDivisionsValid = 0;
+
+            Object.keys(leagueConfig).forEach(league => {
+                divisions.forEach(division => {
+                    const groupName = `${league}_${division.replace(' ', '_')}`;
+                    const checkedCount = document.querySelectorAll(`input[name="${groupName}"]:checked`).length;
+                    totalChecked += checkedCount;
+                    if (checkedCount === 6) {
+                        totalDivisionsValid++;
+                    }
+                });
+            });
+
+            if (totalDivisionsValid === 8) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "⭐ Submit Official Ballot ⭐";
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerText = `Submit Votes (${totalChecked} / 48 Selected)`;
+            }
+        }
+
+        window.onload = initializeForm;
+    </script>
+</body>
+</html>
