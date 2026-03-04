@@ -658,7 +658,24 @@
             }
         }
 
-        window.onload = initializeForm;
+        // 1. Check if they have already voted when the page loads
+        window.onload = function() {
+            if (localStorage.getItem('ccs_allstar_voted') === 'true') {
+                const loading = document.getElementById('loadingIndicator');
+                loading.innerText = "⭐ You have already submitted your official ballot. Thank you for voting! ⭐";
+                loading.style.display = 'block';
+                loading.style.color = '#27ae60';
+                loading.style.backgroundColor = 'rgba(39, 174, 96, 0.1)';
+                loading.style.borderColor = '#27ae60';
+                return; // This completely stops the form from generating
+            }
+            initializeForm();
+        };
+
+        // 2. When they click submit, tag their browser so they can't vote again
+        document.getElementById('votingForm').addEventListener('submit', function() {
+            localStorage.setItem('ccs_allstar_voted', 'true');
+        });
     </script>
 </body>
 </html>
