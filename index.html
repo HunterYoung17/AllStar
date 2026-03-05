@@ -323,7 +323,7 @@
         /* Sign-in UI styling */
         .login-container {
             text-align: center;
-            margin-top: 100px;
+            margin-top: 50px;
             padding: 20px;
         }
         .login-btn {
@@ -345,9 +345,11 @@
 </head>
 <body>
 
+    <h1 class="main-title">Clutch Competitor Series <br> All Star Voting</h1>
+    <p class="instructions">Official Season All-Star Ballot</p>
+    <p class="stats-link">Review full player stats at <a href="https://clutchcompetitorseries.com" target="_blank">clutchcompetitorseries.com</a></p>
+
     <div id="authGate">
-        <h1 class="main-title">Clutch Competitor Series <br> All Star Voting</h1>
-        <p class="instructions">Official Season All-Star Ballot</p>
         <div id="loadingIndicator">Authenticating...</div>
     </div>
 
@@ -435,7 +437,6 @@
             } else {
                 authGate.innerHTML = `
                     <div class="login-container">
-                        <h1 class="main-title">CCS All-Star Voting</h1>
                         <p style="margin-bottom:30px; color:#aaa;">Please sign in with Google to cast your official ballot.</p>
                         <button id="loginBtn" class="login-btn">Sign in with Google</button>
                     </div>`;
