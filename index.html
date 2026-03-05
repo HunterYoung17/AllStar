@@ -244,7 +244,6 @@
             box-shadow: none;
         }
 
-        /* Player Card Popup */
         .player-card-popup {
             visibility: hidden;
             background-color: #1a1a1a;
@@ -363,16 +362,37 @@
             cursor: not-allowed;
             box-shadow: none;
         }
+
+        /* Sign-in UI styling */
+        .login-container {
+            text-align: center;
+            margin-top: 100px;
+            padding: 20px;
+        }
+        .login-btn {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            background: #4285F4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(66,133,244,0.3);
+            transition: transform 0.2s;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
 
-    <h1 class="main-title">Clutch Competitor Series <br> All Star Voting</h1>
-    <p class="instructions">Select exactly <strong>6 players</strong> from each division across all 4 leagues.</p>
-    <p class="eligibility-note">* Players must have played at least 4 series by Week 5 to be considered for all-star voting.</p>
-    <p class="stats-link">Review full player stats before voting at <a href="https://clutchcompetitorseries.com" target="_blank">clutchcompetitorseries.com</a></p>
-
-    <div id="loadingIndicator">Connecting to stats database...</div>
+    <div id="authGate">
+        <h1 class="main-title">Clutch Competitor Series <br> All Star Voting</h1>
+        <p class="instructions">Official Season All-Star Ballot</p>
+        <div id="loadingIndicator">Authenticating...</div>
+    </div>
 
     <form id="votingForm" action="https://api.web3forms.com/submit" method="POST" style="display: none;">
         <input type="hidden" name="access_key" value="122933c9-7ed2-408e-a44c-94eb43e3978a">
@@ -388,7 +408,34 @@
         <button type="submit" id="submitBtn" class="submit-btn" disabled>Submit Votes (0 / 48 Selected)</button>
     </form>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CONFIG FROM SCREENSHOT
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuIWwg3u7x8XLSB1aRHVB8xzBsSik0XIo",
+            authDomain: "ccs-all-star-voting.firebaseapp.com",
+            projectId: "ccs-all-star-voting",
+            storageBucket: "ccs-all-star-voting.firebasestorage.app",
+            messagingSenderId: "323736935507",
+            appId: "1:323736935507:web:98945627dd09d48b84faa6",
+            measurementId: "G-DGQVYGZFKT"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        const formContainer = document.getElementById('formContainer');
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const votingForm = document.getElementById('votingForm');
+        const voterNameInput = document.getElementById('voter_name');
+        const authGate = document.getElementById('authGate');
+
         const leagueConfig = {
             "CCS": { fullName: "Clutch Competitor Series", primary: "#FFD700", secondary: "#555555", bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#222222", counterText: "#ffffff" },
             "CPL": { fullName: "Clutch Prospect League", primary: "#FF8C00", secondary: "#555555", bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff" },
@@ -397,8 +444,6 @@
         };
 
         const divisions = ["American Division", "International Division"];
-
-        // Roster Data
         const playerData = {
             "CCS": {
                 "American Division": [ { name: "Bennus", team: "Blasters" }, { name: "Dyloh", team: "Blasters" }, { name: "HogdoBogdo", team: "Blasters" }, { name: "Mini", team: "Howlers" }, { name: "DJ", team: "Howlers" }, { name: "Ryan", team: "Howlers" }, { name: "Precons", team: "Moose" }, { name: "Sxcure", team: "Moose" }, { name: "Sim", team: "Moose" }, { name: "ILL", team: "Pirates" }, { name: "Rac1n", team: "Pirates" }, { name: "Blisc", team: "Pirates" }, { name: "Sylvia", team: "Shockwave" }, { name: "Beast", team: "Shockwave" }, { name: "Silwoe", team: "Shockwave" }, { name: "Brayjay", team: "Stars" }, { name: "Ale", team: "Stars" } ],
@@ -418,88 +463,78 @@
             }
         };
 
-        const formContainer = document.getElementById('formContainer');
-        const submitBtn = document.getElementById('submitBtn');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const votingForm = document.getElementById('votingForm');
-        const voterNameInput = document.getElementById('voter_name');
-
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRuwmvDQ14YyyR9em6-782QQbJLllB2rguV_RGyl8hqzt4ZW-wZq405IndmWUJyRuzU2PZPCi8eTXSY/pub?gid=0&single=true&output=csv";
-
         let liveStatsMap = {};
-        let formRendered = false; 
+        let formRendered = false;
+        const desiredStatsConfig = [ { key: "MVPR", matchWords: ["mvpr"] }, { key: "Avg Score", matchWords: ["avg score"] }, { key: "GPG", matchWords: ["gpg"] }, { key: "APG", matchWords: ["apg"] }, { key: "SvPG", matchWords: ["sapg", "svpg"] }, { key: "SP", matchWords: ["sp", "series"] } ];
 
-        const desiredStatsConfig = [
-            { key: "MVPR", matchWords: ["mvpr"] },
-            { key: "Avg Score", matchWords: ["avg score"] },
-            { key: "GPG", matchWords: ["gpg"] },
-            { key: "APG", matchWords: ["apg"] },
-            { key: "SvPG", matchWords: ["sapg", "svpg"] },
-            { key: "SP", matchWords: ["sp", "series"] } 
-        ];
-
-        function forceDisplayForm() {
-            if (formRendered) return; 
-            formRendered = true;
-            loadingIndicator.style.display = 'none';
-            votingForm.style.display = 'block';
-            renderForm();
-        }
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const docRef = doc(db, "ballots", user.email);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    authGate.innerHTML = `
+                        <div style="text-align:center; margin-top:50px;">
+                            <h1 style="color:#27ae60">⭐ Ballot Confirmed</h1>
+                            <p>Thank you, ${user.displayName}. Your votes are already locked in!</p>
+                        </div>`;
+                } else {
+                    authGate.style.display = 'none';
+                    votingForm.style.display = 'block';
+                    initializeForm();
+                }
+            } else {
+                authGate.innerHTML = `
+                    <div class="login-container">
+                        <h1 class="main-title">CCS All-Star Voting</h1>
+                        <p style="margin-bottom:30px; color:#aaa;">Please sign in with Google to cast your official ballot.</p>
+                        <button id="loginBtn" class="login-btn">Sign in with Google</button>
+                    </div>`;
+                document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
+            }
+        });
 
         async function initializeForm() {
             try {
-                // Fetch stats with a timestamp to prevent browser caching
                 const response = await fetch(csvUrl + "&cache=" + new Date().getTime());
-                if (!response.ok) throw new Error("Fetch failed");
-                
                 const csvText = await response.text();
                 const rows = csvText.trim().split(/\r?\n/);
-                
                 if (rows.length > 0) {
                     const headers = rows[0].split(',').map(h => h.replace(/['"]+/g, '').trim().toLowerCase());
                     const playerIdx = headers.findIndex(h => h.includes('player'));
-
                     if (playerIdx !== -1) {
                         const statColumnMap = [];
                         desiredStatsConfig.forEach(stat => {
-                            // Find column index where header contains the keyword
                             const index = headers.findIndex(h => stat.matchWords.some(word => h.includes(word)));
-                            if (index !== -1) {
-                                statColumnMap.push({ label: stat.key, index: index });
-                            }
+                            if (index !== -1) statColumnMap.push({ label: stat.key, index: index });
                         });
-
                         for (let i = 1; i < rows.length; i++) {
                             const cols = rows[i].split(',').map(col => col.replace(/['"]+/g, '').trim());
                             if (cols.length > playerIdx && cols[playerIdx]) {
                                 const playerName = cols[playerIdx].trim();
                                 let playerStatsObj = {};
-                                statColumnMap.forEach(statCol => {
-                                    playerStatsObj[statCol.label] = cols[statCol.index] || "0";
-                                });
+                                statColumnMap.forEach(statCol => { playerStatsObj[statCol.label] = cols[statCol.index] || "0"; });
                                 liveStatsMap[playerName] = playerStatsObj;
                             }
                         }
-                        console.log("Stats successfully mapped for", Object.keys(liveStatsMap).length, "players.");
                     }
                 }
-            } catch (error) {
-                console.warn("Stats error:", error);
-            } 
+            } catch (error) { console.warn("Stats error:", error); } 
             forceDisplayForm();
+        }
+
+        function forceDisplayForm() {
+            if (formRendered) return; 
+            formRendered = true;
+            renderForm();
         }
 
         function buildPlayerCard(playerName) {
             const stats = liveStatsMap[playerName];
             if (!stats) return `<div class="card-header-title">No Data</div><div class="card-footer-note">Stats unavailable</div>`;
-
             let html = `<div class="card-header-title">Season Stats</div><div class="card-stats-grid">`;
             for (const [statName, statValue] of Object.entries(stats)) {
-                html += `
-                    <div class="card-stat-box">
-                        <span class="stat-val">${statValue}</span>
-                        <span class="stat-label">${statName}</span>
-                    </div>`;
+                html += `<div class="card-stat-box"><span class="stat-val">${statValue}</span><span class="stat-label">${statName}</span></div>`;
             }
             html += `</div><div class="card-footer-note">View full stats online</div>`;
             return html;
@@ -514,7 +549,6 @@
                 leagueDiv.style.setProperty('--bg-color', theme.bg); leagueDiv.style.setProperty('--card-bg', theme.cardBg);
                 leagueDiv.style.setProperty('--text-color', theme.text); leagueDiv.style.setProperty('--checked-text', theme.checkedText);
                 leagueDiv.style.setProperty('--counter-text', theme.counterText);
-
                 let html = `<div class="league-header"><img src="logos/${league}.png" class="league-logo" onerror="this.style.display='none'"><h2 class="league-title">${theme.fullName}</h2></div><div class="divisions-container">`;
                 divisions.forEach(division => {
                     const groupName = `${league}_${division.replace(' ', '_')}`;
@@ -532,7 +566,7 @@
             });
         }
 
-        function handleSelection(groupName) {
+        window.handleSelection = function(groupName) {
             const checkboxes = document.querySelectorAll(`input[name="${groupName}"]`);
             const checkedBoxes = document.querySelectorAll(`input[name="${groupName}"]:checked`);
             const counterLabel = document.getElementById(`counter_${groupName}`);
@@ -542,7 +576,7 @@
             checkOverallFormValidity();
         }
 
-        function checkOverallFormValidity() {
+        window.checkOverallFormValidity = function() {
             let totalChecked = 0; let totalDivisionsValid = 0;
             const isNameFilled = voterNameInput.value.trim().length > 0;
             Object.keys(leagueConfig).forEach(league => { divisions.forEach(division => { const groupName = `${league}_${division.replace(' ', '_')}`; const checkedCount = document.querySelectorAll(`input[name="${groupName}"]:checked`).length; totalChecked += checkedCount; if (checkedCount === 6) totalDivisionsValid++; }); });
@@ -550,8 +584,18 @@
             else { submitBtn.disabled = true; const statusText = !isNameFilled ? "Enter Name" : `${totalChecked} / 48 Selected`; submitBtn.innerText = `Submit Votes (${statusText})`; }
         }
 
-        // Initialize immediately
-        window.onload = initializeForm;
+        votingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = auth.currentUser;
+            const selected = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            try {
+                await setDoc(doc(db, "ballots", user.email), { name: user.displayName, email: user.email, voter_name: voterNameInput.value, votes: selected, timestamp: serverTimestamp() });
+                const formData = new FormData(votingForm);
+                formData.append("Verified_Email", user.email);
+                await fetch(votingForm.action, { method: votingForm.method, body: formData });
+                location.reload();
+            } catch (err) { alert("Error saving vote. Please try again!"); }
+        });
     </script>
 </body>
 </html>
