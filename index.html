@@ -56,49 +56,6 @@
             text-decoration: underline;
         }
 
-        /* Voter Identity Section */
-        .voter-identity-section {
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #333;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .voter-identity-section label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 8px;
-            font-size: 1.1em;
-            color: #FFD700;
-        }
-
-        .voter-identity-section .note {
-            display: block;
-            font-size: 0.85em;
-            color: #888;
-            margin-bottom: 12px;
-            font-weight: normal;
-        }
-
-        .voter-identity-section input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            background: #2a2a2a;
-            border: 2px solid #444;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 1em;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .voter-identity-section input[type="text"]:focus {
-            border-color: #FFD700;
-        }
-
         #loadingIndicator {
             text-align: center;
             font-size: 1.1em;
@@ -378,12 +335,6 @@
         <input type="hidden" name="access_key" value="122933c9-7ed2-408e-a44c-94eb43e3978a">
         <input type="hidden" name="subject" value="New All-Star Ballot Submitted!">
         
-        <div class="voter-identity-section">
-            <label for="voter_name">Full Name</label>
-            <span class="note">(This information is only seen by sports and will not be shared, needed to prevent form spamming)</span>
-            <input type="text" id="voter_name" name="voter_name" placeholder="Enter your name" required oninput="checkOverallFormValidity()">
-        </div>
-
         <div id="formContainer"></div>
         <button type="submit" id="submitBtn" class="submit-btn" disabled>Submit Votes (0 / 48 Selected)</button>
     </form>
@@ -488,13 +439,14 @@
         const submitBtn = document.getElementById('submitBtn');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const votingForm = document.getElementById('votingForm');
-        const voterNameInput = document.getElementById('voter_name');
 
+        // Master CSV URL
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRuwmvDQ14YyyR9em6-782QQbJLllB2rguV_RGyl8hqzt4ZW-wZq405IndmWUJyRuzU2PZPCi8eTXSY/pub?gid=0&single=true&output=csv";
 
         let liveStatsMap = {};
         let formRendered = false; 
 
+        // Includes "SP" in the list of desired stats
         const desiredStatsConfig = [
             { key: "MVPR", matchWords: ["mvpr"] },
             { key: "Avg Score", matchWords: ["avg score", "average score"] },
@@ -552,6 +504,7 @@
                         }
                     }
                 }
+                console.log("Filtered player cards loaded successfully!");
             } catch (error) {
                 console.warn("Could not load stats. Falling back to default UI.", error);
             } 
@@ -636,6 +589,19 @@
                                 </label>
                             `;
                         });
+                    } else {
+                        for (let i = 1; i <= 10; i++) {
+                            html += `
+                                <label class="player-label">
+                                    <div class="player-card-popup">
+                                        <div class="card-header-title">TBD</div>
+                                        <div class="card-footer-note">Stats will appear here once players are locked in.</div>
+                                    </div>
+                                    <input type="checkbox" name="${groupName}" value="Player ${i}" onchange="handleSelection('${groupName}')"> 
+                                    <span class="player-name">Player ${i}</span>
+                                </label>
+                            `;
+                        }
                     }
 
                     html += `</div></div>`;
@@ -671,7 +637,6 @@
         function checkOverallFormValidity() {
             let totalChecked = 0;
             let totalDivisionsValid = 0;
-            const isNameFilled = voterNameInput.value.trim().length > 0;
 
             Object.keys(leagueConfig).forEach(league => {
                 divisions.forEach(division => {
@@ -684,16 +649,16 @@
                 });
             });
 
-            if (totalDivisionsValid === 8 && isNameFilled) {
+            if (totalDivisionsValid === 8) {
                 submitBtn.disabled = false;
                 submitBtn.innerText = "⭐ Submit Official Ballot ⭐";
             } else {
                 submitBtn.disabled = true;
-                const statusText = !isNameFilled ? "Enter Name" : `${totalChecked} / 48 Selected`;
-                submitBtn.innerText = `Submit Votes (${statusText})`;
+                submitBtn.innerText = `Submit Votes (${totalChecked} / 48 Selected)`;
             }
         }
 
+        // 1. Check if they have already voted when the page loads
         window.onload = function() {
             if (localStorage.getItem('ccs_allstar_voted') === 'true') {
                 const loading = document.getElementById('loadingIndicator');
@@ -702,11 +667,12 @@
                 loading.style.color = '#27ae60';
                 loading.style.backgroundColor = 'rgba(39, 174, 96, 0.1)';
                 loading.style.borderColor = '#27ae60';
-                return; 
+                return; // This completely stops the form from generating
             }
             initializeForm();
         };
 
+        // 2. When they click submit, tag their browser so they can't vote again
         document.getElementById('votingForm').addEventListener('submit', function() {
             localStorage.setItem('ccs_allstar_voted', 'true');
         });
