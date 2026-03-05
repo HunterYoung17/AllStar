@@ -56,6 +56,49 @@
             text-decoration: underline;
         }
 
+        /* Voter Identity Section */
+        .voter-identity-section {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .voter-identity-section label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            color: #FFD700;
+        }
+
+        .voter-identity-section .note {
+            display: block;
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 12px;
+            font-weight: normal;
+        }
+
+        .voter-identity-section input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 1em;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .voter-identity-section input[type="text"]:focus {
+            border-color: #FFD700;
+        }
+
         #loadingIndicator {
             text-align: center;
             font-size: 1.1em;
@@ -329,109 +372,49 @@
     <p class="eligibility-note">* Players must have played at least 4 series by Week 5 to be considered for all-star voting.</p>
     <p class="stats-link">Review full player stats before voting at <a href="https://clutchcompetitorseries.com" target="_blank">clutchcompetitorseries.com</a></p>
 
-    <div id="loadingIndicator">Fetching live player stats from database...</div>
+    <div id="loadingIndicator">Connecting to stats database...</div>
 
     <form id="votingForm" action="https://api.web3forms.com/submit" method="POST" style="display: none;">
         <input type="hidden" name="access_key" value="122933c9-7ed2-408e-a44c-94eb43e3978a">
         <input type="hidden" name="subject" value="New All-Star Ballot Submitted!">
         
+        <div class="voter-identity-section">
+            <label for="voter_name">Full Name</label>
+            <span class="note">(This information is only seen by sports and will not be shared, needed to prevent form spamming)</span>
+            <input type="text" id="voter_name" name="voter_name" placeholder="Enter your name" required oninput="checkOverallFormValidity()">
+        </div>
+
         <div id="formContainer"></div>
         <button type="submit" id="submitBtn" class="submit-btn" disabled>Submit Votes (0 / 48 Selected)</button>
     </form>
 
     <script>
         const leagueConfig = {
-            "CCS": { 
-                fullName: "Clutch Competitor Series", primary: "#FFD700", secondary: "#555555", 
-                bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#222222", counterText: "#ffffff"
-            },
-            "CPL": { 
-                fullName: "Clutch Prospect League", primary: "#FF8C00", secondary: "#555555", 
-                bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff"
-            },
-            "CAS": { 
-                fullName: "Clutch Amateur Series", primary: "#E74C3C", secondary: "#000000", 
-                bg: "#1a1a1a", cardBg: "#2d2d2d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff"
-            },
-            "CNL": { 
-                fullName: "Clutch Novice League", primary: "#3498DB", secondary: "#000000", 
-                bg: "#1a1a1a", cardBg: "#2d2d2d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff"
-            }
+            "CCS": { fullName: "Clutch Competitor Series", primary: "#FFD700", secondary: "#555555", bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#222222", counterText: "#ffffff" },
+            "CPL": { fullName: "Clutch Prospect League", primary: "#FF8C00", secondary: "#555555", bg: "#2a2a2a", cardBg: "#3d3d3d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff" },
+            "CAS": { fullName: "Clutch Amateur Series", primary: "#E74C3C", secondary: "#000000", bg: "#1a1a1a", cardBg: "#2d2d2d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff" },
+            "CNL": { fullName: "Clutch Novice League", primary: "#3498DB", secondary: "#000000", bg: "#1a1a1a", cardBg: "#2d2d2d", text: "#ffffff", checkedText: "#ffffff", counterText: "#ffffff" }
         };
 
         const divisions = ["American Division", "International Division"];
 
+        // Roster Data
         const playerData = {
             "CCS": {
-                "American Division": [
-                    { name: "Bennus", team: "Blasters" }, { name: "Dyloh", team: "Blasters" }, { name: "HogdoBogdo", team: "Blasters" },
-                    { name: "Mini", team: "Howlers" }, { name: "DJ", team: "Howlers" }, { name: "Ryan", team: "Howlers" },
-                    { name: "Precons", team: "Moose" }, { name: "Sxcure", team: "Moose" }, { name: "Sim", team: "Moose" },
-                    { name: "ILL", team: "Pirates" }, { name: "Rac1n", team: "Pirates" }, { name: "Blisc", team: "Pirates" },
-                    { name: "Sylvia", team: "Shockwave" }, { name: "Beast", team: "Shockwave" }, { name: "Silwoe", team: "Shockwave" },
-                    { name: "Brayjay", team: "Stars" }, { name: "Ale", team: "Stars" }
-                ],
-                "International Division": [
-                    { name: "Nautikl", team: "Anglers" }, { name: "Wrld", team: "Anglers" }, { name: "Grizz", team: "Anglers" },
-                    { name: "Angel", team: "Flyers" }, { name: "Joey", team: "Flyers" }, { name: "Kizvy", team: "Flyers" },
-                    { name: "Souls", team: "Ninjas" }, { name: "Oofy", team: "Ninjas" },
-                    { name: "Cristian", team: "Samurai" }, { name: "Blezzy", team: "Samurai" },
-                    { name: "Dxge", team: "Vipers" }, { name: "Poptarts", team: "Vipers" },
-                    { name: "Eli", team: "Zebras" }, { name: "DainBramage", team: "Zebras" }
-                ]
+                "American Division": [ { name: "Bennus", team: "Blasters" }, { name: "Dyloh", team: "Blasters" }, { name: "HogdoBogdo", team: "Blasters" }, { name: "Mini", team: "Howlers" }, { name: "DJ", team: "Howlers" }, { name: "Ryan", team: "Howlers" }, { name: "Precons", team: "Moose" }, { name: "Sxcure", team: "Moose" }, { name: "Sim", team: "Moose" }, { name: "ILL", team: "Pirates" }, { name: "Rac1n", team: "Pirates" }, { name: "Blisc", team: "Pirates" }, { name: "Sylvia", team: "Shockwave" }, { name: "Beast", team: "Shockwave" }, { name: "Silwoe", team: "Shockwave" }, { name: "Brayjay", team: "Stars" }, { name: "Ale", team: "Stars" } ],
+                "International Division": [ { name: "Nautikl", team: "Anglers" }, { name: "Wrld", team: "Anglers" }, { name: "Grizz", team: "Anglers" }, { name: "Angel", team: "Flyers" }, { name: "Joey", team: "Flyers" }, { name: "Kizvy", team: "Flyers" }, { name: "Souls", team: "Ninjas" }, { name: "Oofy", team: "Ninjas" }, { name: "Cristian", team: "Samurai" }, { name: "Blezzy", team: "Samurai" }, { name: "Dxge", team: "Vipers" }, { name: "Poptarts", team: "Vipers" }, { name: "Eli", team: "Zebras" }, { name: "DainBramage", team: "Zebras" } ]
             },
             "CPL": {
-                "American Division": [
-                    { name: "Drip", team: "Coyotes" }, { name: "Driftz", team: "Coyotes" }, { name: "BluePhoenix", team: "Coyotes" },
-                    { name: "Pax", team: "Groundhogs" }, { name: "Frames", team: "Groundhogs" },
-                    { name: "Slykooper", team: "Marauders" }, { name: "DarkGalaxiess", team: "Marauders" }, { name: "Loomeister", team: "Marauders" },
-                    { name: "Guccianii", team: "Mortars" }, { name: "An7iix", team: "Mortars" },
-                    { name: "Rev", team: "Sonic Boom" }, { name: "Nlyu", team: "Sonic Boom" }, { name: "LuvJames", team: "Sonic Boom" },
-                    { name: "Laxxin.", team: "Supernova" }, { name: "Lapis", team: "Supernova" }, { name: "Path678", team: "Supernova" }
-                ],
-                "International Division": [
-                    { name: "Glo", team: "Buffalo" }, { name: "Cryptid", team: "Buffalo" }, { name: "Slayer2k", team: "Buffalo" },
-                    { name: "Bankai", team: "Cobras" }, { name: "Ren", team: "Cobras" },
-                    { name: "Grislyrl", team: "Fishermen" }, { name: "Hellecz", team: "Fishermen" }, { name: "CyanLG", team: "Fishermen" },
-                    { name: "Freazee", team: "Lory" }, { name: "Nick", team: "Lory" }, { name: "Rogue", team: "Lory" },
-                    { name: "Decaf", team: "Shadows" }, { name: "Cam", team: "Shadows" },
-                    { name: "Nirvana", team: "Warriors" }, { name: "Illuzhn", team: "Warriors" }, { name: "Asfhyx", team: "Warriors" }
-                ]
+                "American Division": [ { name: "Drip", team: "Coyotes" }, { name: "Driftz", team: "Coyotes" }, { name: "BluePhoenix", team: "Coyotes" }, { name: "Pax", team: "Groundhogs" }, { name: "Frames", team: "Groundhogs" }, { name: "Slykooper", team: "Marauders" }, { name: "DarkGalaxiess", team: "Marauders" }, { name: "Loomeister", team: "Marauders" }, { name: "Guccianii", team: "Mortars" }, { name: "An7iix", team: "Mortars" }, { name: "Rev", team: "Sonic Boom" }, { name: "Nlyu", team: "Sonic Boom" }, { name: "LuvJames", team: "Sonic Boom" }, { name: "Laxxin.", team: "Supernova" }, { name: "Lapis", team: "Supernova" }, { name: "Path678", team: "Supernova" } ],
+                "International Division": [ { name: "Glo", team: "Buffalo" }, { name: "Cryptid", team: "Buffalo" }, { name: "Slayer2k", team: "Buffalo" }, { name: "Bankai", team: "Cobras" }, { name: "Ren", team: "Cobras" }, { name: "Grislyrl", team: "Fishermen" }, { name: "Hellecz", team: "Fishermen" }, { name: "CyanLG", team: "Fishermen" }, { name: "Freazee", team: "Lory" }, { name: "Nick", team: "Lory" }, { name: "Rogue", team: "Lory" }, { name: "Decaf", team: "Shadows" }, { name: "Cam", team: "Shadows" }, { name: "Nirvana", team: "Warriors" }, { name: "Illuzhn", team: "Warriors" }, { name: "Asfhyx", team: "Warriors" } ]
             },
             "CAS": {
-                "American Division": [
-                    { name: "Large Microwave", team: "Astronauts" }, { name: "Luseo", team: "Astronauts" },
-                    { name: "Aiden", team: "Black Bears" }, { name: "DsyrJames", team: "Black Bears" }, { name: "Shoodoow", team: "Black Bears" },
-                    { name: "Hate.", team: "Cannons" }, { name: "JugPanda", team: "Cannons" }, { name: "Tor", team: "Cannons" },
-                    { name: "KRZ", team: "Conquerors" }, { name: "Vorse", team: "Conquerors" },
-                    { name: "Cjayy", team: "Surge" }, { name: "Speacial", team: "Surge" },
-                    { name: "Marchosias", team: "Wolfpack" }
-                ],
-                "International Division": [
-                    { name: "JT", team: "Behemoths" }, { name: "Spxrr", team: "Behemoths" }, { name: "Different Blu", team: "Behemoths" },
-                    { name: "Dr Scrawny", team: "Copperheads" }, { name: "Carsxnn", team: "Copperheads" }, { name: "Rizada", team: "Copperheads" },
-                    { name: "Senna", team: "Prowlers" }, { name: "Pluooh", team: "Prowlers" },
-                    { name: "Bvo", team: "Shaman" }, { name: "Wraine", team: "Shaman" }, { name: "Talen", team: "Shaman" },
-                    { name: "Meepomic", team: "Skyhawks" }, { name: "Striker", team: "Skyhawks" }, { name: "Violence", team: "Skyhawks" }
-                ]
+                "American Division": [ { name: "Large Microwave", team: "Astronauts" }, { name: "Luseo", team: "Astronauts" }, { name: "Aiden", team: "Black Bears" }, { name: "DsyrJames", team: "Black Bears" }, { name: "Shoodoow", team: "Black Bears" }, { name: "Hate.", team: "Cannons" }, { name: "JugPanda", team: "Cannons" }, { name: "Tor", team: "Cannons" }, { name: "KRZ", team: "Conquerors" }, { name: "Vorse", team: "Conquerors" }, { name: "Cjayy", team: "Surge" }, { name: "Speacial", team: "Surge" }, { name: "Marchosias", team: "Wolfpack" } ],
+                "International Division": [ { name: "JT", team: "Behemoths" }, { name: "Spxrr", team: "Behemoths" }, { name: "Different Blu", team: "Behemoths" }, { name: "Dr Scrawny", team: "Copperheads" }, { name: "Carsxnn", team: "Copperheads" }, { name: "Rizada", team: "Copperheads" }, { name: "Senna", team: "Prowlers" }, { name: "Pluooh", team: "Prowlers" }, { name: "Bvo", team: "Shaman" }, { name: "Wraine", team: "Shaman" }, { name: "Talen", team: "Shaman" }, { name: "Meepomic", team: "Skyhawks" }, { name: "Striker", team: "Skyhawks" }, { name: "Violence", team: "Skyhawks" } ]
             },
             "CNL": {
-                "American Division": [
-                    { name: "Deplooped", team: "Ballistics" }, { name: "Haakonn", team: "Ballistics" }, { name: "Skelly", team: "Ballistics" },
-                    { name: "Bacon", team: "Ducks" }, { name: "Zoomer", team: "Ducks" }, { name: "Trout", team: "Ducks" }, { name: "Tyvi", team: "Ducks" },
-                    { name: "Jon", team: "Rovers" }, { name: "TV Isa_on_wii", team: "Rovers" }, { name: "Dim", team: "Rovers" },
-                    { name: "Seori", team: "Shipwreck" }, { name: "Paz", team: "Shipwreck" }, { name: "Rykow", team: "Shipwreck" },
-                    { name: "Sports", team: "Sound" }, { name: "Eyes", team: "Sound" }, { name: "Zeroh", team: "Sound" },
-                    { name: "Botco", team: "Timberwolves" }, { name: "KaosZaxel", team: "Timberwolves" }, { name: "Yusvanny", team: "Timberwolves" }
-                ],
-                "International Division": [
-                    { name: "Juxzon", team: "Anacondas" }, { name: "Ben", team: "Anacondas" },
-                    { name: "Kazegurui", team: "Bushido" }, { name: "DTB_Bubbaa", team: "Bushido" },
-                    { name: "Nirosat", team: "Leviathans" }, { name: "Ripshark", team: "Leviathans" }, { name: "Burner", team: "Leviathans" }, { name: "OvrCookdBred", team: "Leviathans" },
-                    { name: "Terbiee", team: "Redwings" }, { name: "Mup", team: "Redwings" }, { name: "VRL", team: "Redwings" },
-                    { name: "Chrome Moisty", team: "Elephants" }, { name: "Tarry", team: "Elephants" }, { name: "ClamSplitta", team: "Elephants" },
-                    { name: "Jurchao", team: "Thieves" }
-                ]
+                "American Division": [ { name: "Deplooped", team: "Ballistics" }, { name: "Haakonn", team: "Ballistics" }, { name: "Skelly", team: "Ballistics" }, { name: "Bacon", team: "Ducks" }, { name: "Zoomer", team: "Ducks" }, { name: "Trout", team: "Ducks" }, { name: "Tyvi", team: "Ducks" }, { name: "Jon", team: "Rovers" }, { name: "TV Isa_on_wii", team: "Rovers" }, { name: "Dim", team: "Rovers" }, { name: "Seori", team: "Shipwreck" }, { name: "Paz", team: "Shipwreck" }, { name: "Rykow", team: "Shipwreck" }, { name: "Sports", team: "Sound" }, { name: "Eyes", team: "Sound" }, { name: "Zeroh", team: "Sound" }, { name: "Botco", team: "Timberwolves" }, { name: "KaosZaxel", team: "Timberwolves" }, { name: "Yusvanny", team: "Timberwolves" } ],
+                "International Division": [ { name: "Juxzon", team: "Anacondas" }, { name: "Ben", team: "Anacondas" }, { name: "Kazegurui", team: "Bushido" }, { name: "DTB_Bubbaa", team: "Bushido" }, { name: "Nirosat", team: "Leviathans" }, { name: "Ripshark", team: "Leviathans" }, { name: "Burner", team: "Leviathans" }, { name: "OvrCookdBred", team: "Leviathans" }, { name: "Terbiee", team: "Redwings" }, { name: "Mup", team: "Redwings" }, { name: "VRL", team: "Redwings" }, { name: "Chrome Moisty", team: "Elephants" }, { name: "Tarry", team: "Elephants" }, { name: "ClamSplitta", team: "Elephants" }, { name: "Jurchao", team: "Thieves" } ]
             }
         };
 
@@ -439,38 +422,35 @@
         const submitBtn = document.getElementById('submitBtn');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const votingForm = document.getElementById('votingForm');
+        const voterNameInput = document.getElementById('voter_name');
 
-        // Master CSV URL
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRuwmvDQ14YyyR9em6-782QQbJLllB2rguV_RGyl8hqzt4ZW-wZq405IndmWUJyRuzU2PZPCi8eTXSY/pub?gid=0&single=true&output=csv";
 
         let liveStatsMap = {};
         let formRendered = false; 
 
-        // Includes "SP" in the list of desired stats
         const desiredStatsConfig = [
             { key: "MVPR", matchWords: ["mvpr"] },
-            { key: "Avg Score", matchWords: ["avg score", "average score"] },
+            { key: "Avg Score", matchWords: ["avg score", "score"] },
             { key: "GPG", matchWords: ["gpg"] },
             { key: "APG", matchWords: ["apg"] },
             { key: "SvPG", matchWords: ["sapg", "svpg"] },
-            { key: "SP", matchWords: ["sp", "series played"] } 
+            { key: "SP", matchWords: ["sp", "series"] } 
         ];
 
         function forceDisplayForm() {
             if (formRendered) return; 
             formRendered = true;
-            
             loadingIndicator.style.display = 'none';
             votingForm.style.display = 'block';
             renderForm();
         }
 
-        setTimeout(forceDisplayForm, 2500);
-
         async function initializeForm() {
             try {
-                const response = await fetch(csvUrl + "&t=" + new Date().getTime());
-                if (!response.ok) throw new Error("Failed to connect to spreadsheet.");
+                // Fetch stats with a timestamp to prevent browser caching
+                const response = await fetch(csvUrl + "&cache=" + new Date().getTime());
+                if (!response.ok) throw new Error("Fetch failed");
                 
                 const csvText = await response.text();
                 const rows = csvText.trim().split(/\r?\n/);
@@ -482,7 +462,8 @@
                     if (playerIdx !== -1) {
                         const statColumnMap = [];
                         desiredStatsConfig.forEach(stat => {
-                            const index = headers.findIndex(h => stat.matchWords.includes(h));
+                            // Find column index where header contains the keyword
+                            const index = headers.findIndex(h => stat.matchWords.some(word => h.includes(word)));
                             if (index !== -1) {
                                 statColumnMap.push({ label: stat.key, index: index });
                             }
@@ -490,49 +471,37 @@
 
                         for (let i = 1; i < rows.length; i++) {
                             const cols = rows[i].split(',').map(col => col.replace(/['"]+/g, '').trim());
-                            
                             if (cols.length > playerIdx && cols[playerIdx]) {
-                                const playerName = cols[playerIdx];
+                                const playerName = cols[playerIdx].trim();
                                 let playerStatsObj = {};
-                                
                                 statColumnMap.forEach(statCol => {
                                     playerStatsObj[statCol.label] = cols[statCol.index] || "0";
                                 });
-                                
                                 liveStatsMap[playerName] = playerStatsObj;
                             }
                         }
+                        console.log("Stats successfully mapped for", Object.keys(liveStatsMap).length, "players.");
                     }
                 }
-                console.log("Filtered player cards loaded successfully!");
             } catch (error) {
-                console.warn("Could not load stats. Falling back to default UI.", error);
+                console.warn("Stats error:", error);
             } 
-            
             forceDisplayForm();
         }
 
         function buildPlayerCard(playerName) {
             const stats = liveStatsMap[playerName];
-            
-            if (!stats) {
-                return `<div class="card-header-title">Data Unavailable</div><div class="card-footer-note">Stats missing or ineligible</div>`;
-            }
+            if (!stats) return `<div class="card-header-title">No Data</div><div class="card-footer-note">Stats unavailable</div>`;
 
-            let html = `<div class="card-header-title">Season Stats</div>`;
-            html += `<div class="card-stats-grid">`;
-            
+            let html = `<div class="card-header-title">Season Stats</div><div class="card-stats-grid">`;
             for (const [statName, statValue] of Object.entries(stats)) {
                 html += `
                     <div class="card-stat-box">
                         <span class="stat-val">${statValue}</span>
                         <span class="stat-label">${statName}</span>
-                    </div>
-                `;
+                    </div>`;
             }
-            
-            html += `</div>`;
-            html += `<div class="card-footer-note">View complete leaderboards online</div>`;
+            html += `</div><div class="card-footer-note">View full stats online</div>`;
             return html;
         }
 
@@ -541,75 +510,25 @@
                 const theme = leagueConfig[league];
                 const leagueDiv = document.createElement('div');
                 leagueDiv.className = 'league-section';
-                
-                leagueDiv.style.setProperty('--primary-color', theme.primary);
-                leagueDiv.style.setProperty('--secondary-color', theme.secondary);
-                leagueDiv.style.setProperty('--bg-color', theme.bg);
-                leagueDiv.style.setProperty('--card-bg', theme.cardBg);
-                leagueDiv.style.setProperty('--text-color', theme.text);
-                leagueDiv.style.setProperty('--checked-text', theme.checkedText);
+                leagueDiv.style.setProperty('--primary-color', theme.primary); leagueDiv.style.setProperty('--secondary-color', theme.secondary);
+                leagueDiv.style.setProperty('--bg-color', theme.bg); leagueDiv.style.setProperty('--card-bg', theme.cardBg);
+                leagueDiv.style.setProperty('--text-color', theme.text); leagueDiv.style.setProperty('--checked-text', theme.checkedText);
                 leagueDiv.style.setProperty('--counter-text', theme.counterText);
 
-                let html = `
-                    <div class="league-header">
-                        <img src="logos/${league}.png" alt="${league} Logo" class="league-logo" onerror="this.style.display='none'">
-                        <h2 class="league-title">${theme.fullName}</h2>
-                    </div>
-                    <div class="divisions-container">
-                `;
-
+                let html = `<div class="league-header"><img src="logos/${league}.png" class="league-logo" onerror="this.style.display='none'"><h2 class="league-title">${theme.fullName}</h2></div><div class="divisions-container">`;
                 divisions.forEach(division => {
                     const groupName = `${league}_${division.replace(' ', '_')}`;
-                    
-                    html += `
-                        <div class="division-section">
-                            <div class="division-header">
-                                <div class="division-title">${division}</div>
-                                <div class="counter" id="counter_${groupName}">0 / 6</div>
-                            </div>
-                            <div class="player-grid">
-                    `;
-
-                    const currentDivisionPlayers = (playerData[league] && playerData[league][division]) 
-                        ? playerData[league][division] 
-                        : null;
-
+                    html += `<div class="division-section"><div class="division-header"><div class="division-title">${division}</div><div class="counter" id="counter_${groupName}">0 / 6</div></div><div class="player-grid">`;
+                    const currentDivisionPlayers = (playerData[league] && playerData[league][division]) ? playerData[league][division] : null;
                     if (currentDivisionPlayers) {
                         currentDivisionPlayers.forEach(player => {
                             const cardHtml = buildPlayerCard(player.name);
-                            
-                            html += `
-                                <label class="player-label">
-                                    <div class="player-card-popup">${cardHtml}</div>
-                                    <input type="checkbox" name="${groupName}" value="${player.name}" onchange="handleSelection('${groupName}')"> 
-                                    <span class="player-name">
-                                        ${player.name}
-                                        <img src="logos/${player.team}.png" alt="${player.team}" class="team-logo" title="${player.team}" onerror="this.style.display='none'">
-                                    </span>
-                                </label>
-                            `;
+                            html += `<label class="player-label"><div class="player-card-popup">${cardHtml}</div><input type="checkbox" name="${groupName}" value="${player.name}" onchange="handleSelection('${groupName}')"><span class="player-name">${player.name}<img src="logos/${player.team}.png" class="team-logo" onerror="this.style.display='none'"></span></label>`;
                         });
-                    } else {
-                        for (let i = 1; i <= 10; i++) {
-                            html += `
-                                <label class="player-label">
-                                    <div class="player-card-popup">
-                                        <div class="card-header-title">TBD</div>
-                                        <div class="card-footer-note">Stats will appear here once players are locked in.</div>
-                                    </div>
-                                    <input type="checkbox" name="${groupName}" value="Player ${i}" onchange="handleSelection('${groupName}')"> 
-                                    <span class="player-name">Player ${i}</span>
-                                </label>
-                            `;
-                        }
                     }
-
                     html += `</div></div>`;
                 });
-
-                html += `</div>`; 
-                leagueDiv.innerHTML = html;
-                formContainer.appendChild(leagueDiv);
+                html += `</div>`; leagueDiv.innerHTML = html; formContainer.appendChild(leagueDiv);
             });
         }
 
@@ -617,65 +536,22 @@
             const checkboxes = document.querySelectorAll(`input[name="${groupName}"]`);
             const checkedBoxes = document.querySelectorAll(`input[name="${groupName}"]:checked`);
             const counterLabel = document.getElementById(`counter_${groupName}`);
-            
             counterLabel.innerText = `${checkedBoxes.length} / 6`;
-
-            if (checkedBoxes.length === 6) {
-                counterLabel.classList.add('valid');
-                counterLabel.innerText = "6 / 6 ✅";
-                checkboxes.forEach(box => {
-                    if (!box.checked) box.disabled = true;
-                });
-            } else {
-                counterLabel.classList.remove('valid');
-                checkboxes.forEach(box => box.disabled = false);
-            }
-
+            if (checkedBoxes.length === 6) { counterLabel.classList.add('valid'); counterLabel.innerText = "6 / 6 ✅"; checkboxes.forEach(box => { if (!box.checked) box.disabled = true; }); }
+            else { counterLabel.classList.remove('valid'); checkboxes.forEach(box => box.disabled = false); }
             checkOverallFormValidity();
         }
 
         function checkOverallFormValidity() {
-            let totalChecked = 0;
-            let totalDivisionsValid = 0;
-
-            Object.keys(leagueConfig).forEach(league => {
-                divisions.forEach(division => {
-                    const groupName = `${league}_${division.replace(' ', '_')}`;
-                    const checkedCount = document.querySelectorAll(`input[name="${groupName}"]:checked`).length;
-                    totalChecked += checkedCount;
-                    if (checkedCount === 6) {
-                        totalDivisionsValid++;
-                    }
-                });
-            });
-
-            if (totalDivisionsValid === 8) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = "⭐ Submit Official Ballot ⭐";
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.innerText = `Submit Votes (${totalChecked} / 48 Selected)`;
-            }
+            let totalChecked = 0; let totalDivisionsValid = 0;
+            const isNameFilled = voterNameInput.value.trim().length > 0;
+            Object.keys(leagueConfig).forEach(league => { divisions.forEach(division => { const groupName = `${league}_${division.replace(' ', '_')}`; const checkedCount = document.querySelectorAll(`input[name="${groupName}"]:checked`).length; totalChecked += checkedCount; if (checkedCount === 6) totalDivisionsValid++; }); });
+            if (totalDivisionsValid === 8 && isNameFilled) { submitBtn.disabled = false; submitBtn.innerText = "⭐ Submit Official Ballot ⭐"; }
+            else { submitBtn.disabled = true; const statusText = !isNameFilled ? "Enter Name" : `${totalChecked} / 48 Selected`; submitBtn.innerText = `Submit Votes (${statusText})`; }
         }
 
-        // 1. Check if they have already voted when the page loads
-        window.onload = function() {
-            if (localStorage.getItem('ccs_allstar_voted') === 'true') {
-                const loading = document.getElementById('loadingIndicator');
-                loading.innerText = "⭐ You have already submitted your official ballot. Thank you for voting! ⭐";
-                loading.style.display = 'block';
-                loading.style.color = '#27ae60';
-                loading.style.backgroundColor = 'rgba(39, 174, 96, 0.1)';
-                loading.style.borderColor = '#27ae60';
-                return; // This completely stops the form from generating
-            }
-            initializeForm();
-        };
-
-        // 2. When they click submit, tag their browser so they can't vote again
-        document.getElementById('votingForm').addEventListener('submit', function() {
-            localStorage.setItem('ccs_allstar_voted', 'true');
-        });
+        // Initialize immediately
+        window.onload = initializeForm;
     </script>
 </body>
 </html>
