@@ -356,7 +356,7 @@
     </div>
 
     <form id="votingForm" action="https://api.web3forms.com/submit" method="POST" style="display: none;">
-        <input type="hidden" name="access_key" value="122933c9-7ed2-408e-a44c-94eb43e3978a">
+        <input type="hidden" name="access_key" value="63c26624-864a-440f-b2de-5b9a3c2a390a">
         <input type="hidden" name="subject" value="New All-Star Ballot Submitted!">
         
         <div id="formContainer"></div>
@@ -366,10 +366,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
+        // Reverted to signInWithPopup based on your authorized domain fix
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
-        // Your new v12.18.0 configuration
+        // Your v12.18.0 configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCDUQmUUB1MPQvyLbfcVVFf1vH6domPy8o",
             authDomain: "s6-all-star-voting.firebaseapp.com",
@@ -427,18 +428,29 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const docRef = doc(db, "ballots", user.email);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
+                try {
+                    const docRef = doc(db, "ballots", user.email);
+                    const docSnap = await getDoc(docRef);
+                    
+                    if (docSnap.exists()) {
+                        authGate.innerHTML = `
+                            <div style="text-align:center; margin-top:50px;">
+                                <h1 style="color:#27ae60">⭐ Ballot Confirmed</h1>
+                                <p>Thank you, ${user.displayName}. Your votes are already locked in!</p>
+                            </div>`;
+                    } else {
+                        authGate.style.display = 'none';
+                        votingForm.style.display = 'block';
+                        initializeForm();
+                    }
+                } catch (error) {
+                    console.error("Database Error:", error);
                     authGate.innerHTML = `
                         <div style="text-align:center; margin-top:50px;">
-                            <h1 style="color:#27ae60">⭐ Ballot Confirmed</h1>
-                            <p>Thank you, ${user.displayName}. Your votes are already locked in!</p>
+                            <h2 style="color:#E74C3C">Database Connection Error</h2>
+                            <p>We couldn't verify your ballot status. Firebase is blocking the connection.</p>
+                            <p style="font-size: 0.9em; color:#888;">Press F12 and check the Developer Console for the exact error message.</p>
                         </div>`;
-                } else {
-                    authGate.style.display = 'none';
-                    votingForm.style.display = 'block';
-                    initializeForm();
                 }
             } else {
                 authGate.innerHTML = `
@@ -446,7 +458,6 @@
                         <p style="margin-bottom:30px; color:#aaa;">Please sign in with Google to cast your official ballot.</p>
                         <button id="loginBtn" class="login-btn">Sign in with Google</button>
                     </div>`;
-                // Reminder: If testing locally without Live Server, this popup will auto-close!
                 document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
             }
         });
