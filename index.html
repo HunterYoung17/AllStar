@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clutch Competitor Series - All Star Voting</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -363,22 +364,25 @@
     </form>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
+        // Your new v12.18.0 configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyAuIWWg3u7x8XlSB1aRHVB8xzBsSik0XIo",
-            authDomain: "ccs-all-star-voting.firebaseapp.com",
-            projectId: "ccs-all-star-voting",
-            storageBucket: "ccs-all-star-voting.firebasestorage.app",
-            messagingSenderId: "323736935507",
-            appId: "1:323736935507:web:98945627dd09d48b84faa6",
-            measurementId: "G-DGQVYZGFKT"
+            apiKey: "AIzaSyCDUQmUUB1MPQvyLbfcVVFf1vH6domPy8o",
+            authDomain: "s6-all-star-voting.firebaseapp.com",
+            projectId: "s6-all-star-voting",
+            storageBucket: "s6-all-star-voting.firebasestorage.app",
+            messagingSenderId: "64373798752",
+            appId: "1:64373798752:web:aadfa40df982f33f26d005",
+            measurementId: "G-SRXVEM6EWP"
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth();
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
@@ -396,6 +400,7 @@
         };
 
         const divisions = ["American Division", "International Division"];
+        
         const playerData = {
             "CCS": {
                 "American Division": [ { name: "Bennus", team: "Blasters" }, { name: "Dyloh", team: "Blasters" }, { name: "HogdoBogdo", team: "Blasters" }, { name: "Mini", team: "Howlers" }, { name: "Ryan", team: "Howlers" }, { name: "Precons", team: "Moose" }, { name: "Sxcure", team: "Moose" }, { name: "Sim", team: "Moose" }, { name: "ILL", team: "Pirates" }, { name: "Rac1n", team: "Pirates" }, { name: "Blisc", team: "Pirates" }, { name: "Beast", team: "Shockwave" }, { name: "Silwoe", team: "Shockwave" }, { name: "Brayjay", team: "Stars" }, { name: "Blezzy", team: "Stars" }, { name: "Ale", team: "Stars" } ],
@@ -441,37 +446,45 @@
                         <p style="margin-bottom:30px; color:#aaa;">Please sign in with Google to cast your official ballot.</p>
                         <button id="loginBtn" class="login-btn">Sign in with Google</button>
                     </div>`;
+                // Reminder: If testing locally without Live Server, this popup will auto-close!
                 document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
             }
         });
 
-        async function initializeForm() {
-            try {
-                const response = await fetch(csvUrl + "&cache=" + new Date().getTime());
-                const csvText = await response.text();
-                const rows = csvText.trim().split(/\r?\n/);
-                if (rows.length > 0) {
-                    const headers = rows[0].split(',').map(h => h.replace(/['"]+/g, '').trim().toLowerCase());
-                    const playerIdx = headers.findIndex(h => h.includes('player'));
-                    if (playerIdx !== -1) {
-                        const statColumnMap = [];
-                        desiredStatsConfig.forEach(stat => {
-                            const index = headers.findIndex(h => stat.matchWords.some(word => h.includes(word)));
-                            if (index !== -1) statColumnMap.push({ label: stat.key, index: index });
-                        });
-                        for (let i = 1; i < rows.length; i++) {
-                            const cols = rows[i].split(',').map(col => col.replace(/['"]+/g, '').trim());
-                            if (cols.length > playerIdx && cols[playerIdx]) {
-                                const playerName = cols[playerIdx].trim();
-                                let playerStatsObj = {};
-                                statColumnMap.forEach(statCol => { playerStatsObj[statCol.label] = cols[statCol.index] || "0"; });
-                                liveStatsMap[playerName] = playerStatsObj;
-                            }
+        function initializeForm() {
+            const cacheBustedUrl = csvUrl + "&cache=" + new Date().getTime();
+            
+            Papa.parse(cacheBustedUrl, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    if (data.length > 0) {
+                        const keys = Object.keys(data[0]);
+                        const playerKey = keys.find(k => k.toLowerCase().includes('player'));
+
+                        if (playerKey) {
+                            data.forEach(row => {
+                                const playerName = row[playerKey] ? row[playerKey].trim() : null;
+                                if (playerName) {
+                                    let playerStatsObj = {};
+                                    desiredStatsConfig.forEach(stat => {
+                                        const matchingKey = keys.find(k => stat.matchWords.some(word => k.toLowerCase().includes(word)));
+                                        playerStatsObj[stat.key] = matchingKey ? (row[matchingKey] || "0") : "0";
+                                    });
+                                    liveStatsMap[playerName] = playerStatsObj;
+                                }
+                            });
                         }
                     }
+                    forceDisplayForm();
+                },
+                error: function(err) {
+                    console.warn("Stats error:", err);
+                    forceDisplayForm();
                 }
-            } catch (error) { console.warn("Stats error:", error); } 
-            forceDisplayForm();
+            });
         }
 
         function forceDisplayForm() {
